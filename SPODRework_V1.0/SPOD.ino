@@ -2,7 +2,7 @@
  * @file    SPOD_Rework.ino
  * @brief   
  *
- * @author  Daniel Carranza Valenzuela 
+ * @author  Sascha Fowler
  * @date    July 7, 2025
  * @log     SPOD code redesign from V1
  * @TBD     
