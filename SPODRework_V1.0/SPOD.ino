@@ -3,8 +3,8 @@
  * @brief   
  *
  * @author  Sascha Fowler
- * @date    July 23, 2026
- * @log     SPOD code redesign from V1, Testing with Orange SPOD - RTC Update, Serial/File Write (All data in one day), SI1145 Function
+ * @date    July 28, 2026
+ * @log     SPOD code redesign from V1, Tested with Orange SPOD - RTC Update, Serial/File Write (All data in one day), SI1145 Function
  * @TBD     Test Moisture Sensor, Temp Sensors, and CO2
             Add in New LCD screen
             Add in calibration sections to the code

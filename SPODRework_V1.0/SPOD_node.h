@@ -4,7 +4,7 @@
  *
  * @author  Sascha Fowler 
  * @date    July 28, 2026
- * @log     Creating SPOD nodes for code redesign from V1, Testing with Orange SPOD - RTC Update, Serial/File Write, SI1145 Function
+ * @log     Creating SPOD nodes for code redesign from V1, Tested with Orange SPOD - RTC Update, Serial/File Write, SI1145 Function
  * @TBD     
 ******************************************************************************/
 #ifndef _SPOD_NODE_H
