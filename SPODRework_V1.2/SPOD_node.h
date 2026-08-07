@@ -1,10 +1,10 @@
 /*******************************************************************************
  * @file    SPOD_node.h
- * @brief   
+ * @brief   Use for ReWork V1.2
  *
  * @author  Sascha Fowler 
- * @date    July 28, 2026
- * @log     Creating SPOD nodes for code redesign from V1, Tested with Orange SPOD - RTC Update, Serial/File Write, SI1145 Function
+ * @date    August 7, 2026
+ * @log     
  * @TBD     
 ******************************************************************************/
 #ifndef _SPOD_NODE_H
@@ -34,6 +34,6 @@ const int PM_TX = 3;
 //SD Card Settings
 #define SD_CS         10
 
-char spodID[] = "Green_5";
+char spodID[] = "GN_5";
 
 #endif // _SPOD_NODE_H

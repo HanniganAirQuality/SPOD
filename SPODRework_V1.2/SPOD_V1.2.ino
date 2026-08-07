@@ -1,13 +1,15 @@
 /*******************************************************************************
- * @file    SPOD_Rework_V1.1.ino
+ * @file    SPOD_Rework_V1.2.ino
  * @brief   
  *
  * @author  Sascha Fowler
- * @date    July Aug 4, 2026
- * @log     SPOD code redesign from V1, Tested with Yellow 3 SPOD - RTC Update, Serial/File Write (All data in one day), SI1145, Moisture Sensor, Temp Sensors (Orange T1 and T2), and CO2 Sensor (Yellow 2) all function
- * @TBD     **** NOTE: Instigates DFU ERROR when LCDDispplay is Turned On - Use only later versions
-            Add in calibration sections to the code
-            Add in New LCD screen
+ * @date    August 7, 2026
+ * @log     SPOD code redesign from V1 for Minima - Integrated Sensors, Tested with Yellow 3 SPOD - RTC Update, Serial/File Write (All data in one day), SI1145, Moisture Sensor, Temp Sensors (Orange T1 and T2), and CO2 Sensor (Yellow 2) all function
+            Calibration Subsection Added Into Code
+ * @TBD     Integrate Old LCD Scripts (Ankit) - Sections for setup() and loop() Found In File "LCD_Legacy.cpp"
+                Currently Firmware instigates DFU Issues 
+                Likely Due to Infinite Loop in Firmware (Serial Becomes Backed Up) - To fix: Double Press reset on Minima to set into DFU mode - upload without LCD
+            See "Future Requests" section of the README.md for more info
 ******************************************************************************/
 /*  Libraries  */
 #include <Arduino.h>            
@@ -24,12 +26,6 @@
 //const word chipSelect = 10;
 
 /**************************  Conditional Declarations for Sensors  **************************/
-/*  Header Files for LCD Screen  */
-#if LCDDisplay
-  #include "LCD_PCD8544.h"      //PCD8544 controller  datasheet   84x48 pixel black and white LCDs
-                                //https://www.sparkfun.com/datasheets/LCD/Monochrome/Nokia5110.pdf
-#endif
-
 /*  Header Files for the Visible/UV/IR Light Sensor  */
 #if SI1145
   #include "Adafruit_SI1145.h"
@@ -44,6 +40,7 @@
     digitalWrite(soilPower, HIGH);//turn D7 "On"
     delay(10);//wait 10 milliseconds 
     val = analogRead(soilPin);//Read the SIG value form sensor 
+    
     return val;//send current moisture value
   }
 #endif
@@ -132,7 +129,8 @@ void setup() {
 
   pinMode(chipSelect, OUTPUT);
   pinMode(10, OUTPUT);
-
+  
+  //Chnage this to char
   // Create a file name based on the current date (format: "YourPodID_YYYY_MM_DD.txt")
   fileName = "SPOD_" + String(spodID) + "_" + String(now.year()) + "_" + String(now.month()) + "_" + String(now.day()) + ".txt";
   // Print the file name to Serial for debugging
@@ -162,29 +160,12 @@ void setup() {
     }
   #endif
 
+  /*******************SOIL MOISTURE SENSOR PIN SETUP************/
   #if MOISTURE_ENABLED
-    /*******************SOIL MOISTURE SENSOR PIN SETUP************/
     pinMode(soilPower, OUTPUT);//Set D7 as an OUTPUT
     digitalWrite(soilPower, HIGH);//Set to LOW so no power is flowing through the sensor
   #endif
   
-  //RTC.adjust(DateTime(__DATE__, __TIME__)); // run uncommented for the first time, once time is set, comment out and reupload.
-  #if LCDDisplay 
-    pinMode(10, OUTPUT);
-    pinMode(POWERpin, OUTPUT);
-    digitalWrite(POWERpin, HIGH);
-    pinMode(RST, OUTPUT);
-    pinMode(ChipEnable, OUTPUT);
-    pinMode(DCmodeSelect, OUTPUT);
-    pinMode(DataIN, OUTPUT);
-    pinMode(SerialCLK, OUTPUT);
-    LcdInit();
-    LcdXY(5,3);
-    LcdWriteString('SPOD' + spodID);
-    delay(2000);
-    LCDClear();
-  #endif
-
   Serial.println("Done Setup"); //states that all of the setup code is completed
 }
 
@@ -221,10 +202,7 @@ void loop() {
     #endif
   #endif
 
-  #if LCDDisplay
-    static int cursorX = 0;
-    static int cursorY = 0;
-  #endif
+  //Place Start of LCD Screen Initialization Cursor Here
 
   #if SI1145
     float UVindex = sun.readUV();
@@ -241,12 +219,11 @@ void loop() {
     String soil_moisture = String(read_soil);
     smspercent = read_soil;
     //Once testing is done and no calibration, place this in to not get values over 100% SM
-    /*if (read_soil > 100) {
+    if (read_soil > 100) {
         smspercent = 100;
     } else if (read_soil < 0) {
       smspercent = 0;
     }
-    */
     #if CALIBRATION
     smspercent = (moisture_slope) * (read_soil) + 100;
       if (smspercent > 100) {
@@ -280,14 +257,10 @@ void loop() {
       temp_int = 0;
     }
     sprintf(str, "%d", (temp_int - 2));
-    //LcdXY(0, 0);                          // FOR OLD DISPLAY FILE
-    //LcdWriteString("Temp1:");             // FOR OLD DISPLAY FILE
     char temp1Str[10];                    // Create a character array to hold the temperature value
     dtostrf(read_temp1, 4, 2, temp1Str);  // Convert the float to a C-string with one decimal place
-    //LcdWriteString(temp1Str);             // FOR OLD DISPLAY FILE
-    //LcdWriteString(String(read_temp1));
-    //LcdWriteString("C");  // FOR OLD DISPLAY FILE
   #endif
+
   #if TEMPERATURE_TWO_ENABLED
     #if (TEMPERATURE_ONE_ENABLED == 0)
       char str[20];
@@ -312,12 +285,8 @@ void loop() {
       temp_int = 0;
 
     sprintf(str, "%d", (temp_int - 2));
-    //LcdWriteString(", Temp2:");            // FOR OLD DISPLAY FILE
     char temp2Str[10];                    // Create a character array to hold the temperature value
     dtostrf(read_temp2, 4, 2, temp2Str);  // Convert the float to a C-string with one decimal place
-    //LcdWriteString(temp2Str);             // FOR OLD DISPLAY FILE
-    //LcdWriteString(temp2Str);
-    //LcdWriteString("C");  // FOR OLD DISPLAY FILE
   #endif
 
   #if CO2_ENABLED
@@ -445,83 +414,7 @@ void loop() {
     }
   }
 
-  #if LCDDisplay //LCD SCREEN Print (legacy)
-    // SI1145 Section
-    #if SI1145
-      char visStr[10], irStr[10], uvStr[10];
-      // Convertinbg float to string for the LCD
-      dtostrf(Visible, 4, 2, visStr);
-      dtostrf(IRindex, 4, 2, irStr);
-      dtostrf(UVindex, 4, 2, uvStr);
-      // VIS
-      LcdXY(0, 0);
-      LcdWriteString("Vis: ");
-      LcdWriteString(visStr);
-      delay(800);
-      // IR
-      LcdXY(0, 2);
-      LcdWriteString("IR: ");
-      LcdWriteString(irStr);
-      delay(800);
-      // UV
-      LcdXY(0, 4);
-      LcdWriteString("UV: ");
-      LcdWriteString(uvStr);
-    #endif
-    delay(1000);
-    LCDClear();
-
-    // Temp 1 && Temp 2
-    #if TEMPERATURE_ONE_ENABLED || TEMPERATURE_TWO_ENABLED
-      LcdXY(0, 0);
-      #if TEMPERATURE_ONE_ENABLED && !TEMPERATURE_TWO_ENABLED
-        LcdWriteString("Temp1:");
-        LcdWriteString(temp1Str);
-        LcdWriteString("C");
-        LcdWriteString("  Temp2:");
-        LcdWriteString("NoSensor");
-        delay(800);
-      #elif TEMPERATURE_TWO_ENABLED && !TEMPERATURE_ONE_ENABLED
-        LcdWriteString("Temp1:");
-        LcdWriteString("NoSensor");
-        LcdWriteString("  Temp2:");
-        LcdWriteString(temp2Str);
-        LcdWriteString("C");
-        delay(800);
-      #else
-        LcdWriteString("Temp1:");
-        LcdWriteString(temp1Str);
-        LcdWriteString("C");
-        delay(800);
-        LcdWriteString("  Temp2:");
-        LcdWriteString(temp2Str);
-        LcdWriteString("C");
-        delay(800);
-      #endif
-    #endif
-
-    //Soil moisture
-    #if MOISTURE_ENABLED
-      char moistureStr[10];
-      sprintf(moistureStr, "%d", smspercent);
-      LcdXY(0, 3);
-      LcdWriteString("S.M.S: ");
-      LcdWriteString(moistureStr);
-      LcdWriteString("%");
-      delay(800);
-    #endif
-
-    // CO2
-    #if CO2_ENABLED
-      LcdXY(0, 5);
-      LcdWriteString("CO2: ");
-      sprintf(str, "%d", Co2_data);
-      LcdWriteString(str);
-      LcdWriteString("ppm");
-    #endif
-    delay(1000);
-    LCDClear();
-  #endif
+  //LCD Display Code Here
 
   #if SERIAL_ENABLED
     Serial.print("\n");
