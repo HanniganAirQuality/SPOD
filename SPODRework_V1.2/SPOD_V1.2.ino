@@ -4,7 +4,7 @@
  *
  * @author  Sascha Fowler
  * @date    August 7, 2026
- * @log     SPOD code redesign from V1 for Minima - Integrated Sensors, Tested with Yellow 3 SPOD - RTC Update, Serial/File Write (All data in one day), SI1145, Moisture Sensor, Temp Sensors (Orange T1 and T2), and CO2 Sensor (Yellow 2) all function
+ * @log     SPOD code redesign from V1.1 for Minima - Integrated Sensors, Tested with Yellow 3 SPOD - RTC Update, Serial/File Write (All data in one day), SI1145, Moisture Sensor, Temp Sensors (Orange T1 and T2), and CO2 Sensor (Yellow 2) all function
             Calibration Subsection Added Into Code
  * @TBD     Integrate Old LCD Scripts (Ankit) - Sections for setup() and loop() Found In File "LCD_Legacy.cpp"
                 Currently Firmware instigates DFU Issues 
