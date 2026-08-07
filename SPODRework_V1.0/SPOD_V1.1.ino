@@ -1,13 +1,13 @@
 /*******************************************************************************
- * @file    SPOD_Rework.ino
+ * @file    SPOD_Rework_V1.1.ino
  * @brief   
  *
  * @author  Sascha Fowler
- * @date    July 28, 2026
- * @log     SPOD code redesign from V1, Tested with Orange SPOD - RTC Update, Serial/File Write (All data in one day), SI1145 Function
- * @TBD     Test Moisture Sensor, Temp Sensors, and CO2
-            Add in New LCD screen
+ * @date    July Aug 4, 2026
+ * @log     SPOD code redesign from V1, Tested with Yellow 3 SPOD - RTC Update, Serial/File Write (All data in one day), SI1145, Moisture Sensor, Temp Sensors (Orange T1 and T2), and CO2 Sensor (Yellow 2) all function
+ * @TBD     **** NOTE: Instigates DFU ERROR when LCDDispplay is Turned On - Use only later versions
             Add in calibration sections to the code
+            Add in New LCD screen
 ******************************************************************************/
 /*  Libraries  */
 #include <Arduino.h>            
@@ -55,8 +55,8 @@
   #include <iot_cmd.h>
 
   Ezo_board ph = Ezo_board(99, "PH");
-  Ezo_board temperature1 = Ezo_board(102, "TEMP1");  // Replace 100 with the I2C address of the first temperature sensor
-  Ezo_board temperature2 = Ezo_board(103, "TEMP2");  // Replace 101 with the I2C address of the second temperature sensor
+  Ezo_board temperature1 = Ezo_board(102, "Temp1");  // Replace 100 with the I2C address of the first temperature sensor
+  Ezo_board temperature2 = Ezo_board(103, "Temp2");  // Replace 101 with the I2C address of the second temperature sensor
 #endif                               
 
 #if CO2_ENABLED
@@ -96,7 +96,10 @@ int Y, M, D, h, m, s;
 /*******/
 
 void setup() {
-
+  #if SERIAL_ENABLED
+    Serial.begin(9600);
+  #endif
+  Serial.print("we made it joe");
   Wire.begin();
   SPI.begin();
 
@@ -126,9 +129,6 @@ void setup() {
   #else 
     DateTime now = RTC.now();
   #endif //SD_ENABLED
-  #if SERIAL_ENABLED
-    Serial.begin(9600);
-  #endif
 
   pinMode(chipSelect, OUTPUT);
   pinMode(10, OUTPUT);
@@ -169,7 +169,7 @@ void setup() {
   #endif
   
   //RTC.adjust(DateTime(__DATE__, __TIME__)); // run uncommented for the first time, once time is set, comment out and reupload.
-  #if LCDDisplay
+  #if LCDDisplay 
     pinMode(10, OUTPUT);
     pinMode(POWERpin, OUTPUT);
     digitalWrite(POWERpin, HIGH);
@@ -180,7 +180,7 @@ void setup() {
     pinMode(SerialCLK, OUTPUT);
     LcdInit();
     LcdXY(5,3);
-    LcdWriteString(("SPOD " + String(spodID)).c_str());
+    LcdWriteString('SPOD' + spodID);
     delay(2000);
     LCDClear();
   #endif
@@ -224,7 +224,6 @@ void loop() {
   #if LCDDisplay
     static int cursorX = 0;
     static int cursorY = 0;
-    LCDClear();
   #endif
 
   #if SI1145
@@ -240,9 +239,16 @@ void loop() {
     int read_soil = readSoil();
     int smspercent = 0;
     String soil_moisture = String(read_soil);
-
+    smspercent = read_soil;
+    //Once testing is done and no calibration, place this in to not get values over 100% SM
+    /*if (read_soil > 100) {
+        smspercent = 100;
+    } else if (read_soil < 0) {
+      smspercent = 0;
+    }
+    */
     #if CALIBRATION
-      smspercent = (moisture_slope) * (read_soil) + 100;
+    smspercent = (moisture_slope) * (read_soil) + 100;
       if (smspercent > 100) {
         smspercent = 100;
       } else if (smspercent < 0) {
@@ -267,20 +273,21 @@ void loop() {
     delay(1000);
     receive_reading(temperature1);  //get the reading from the RTD circuit
     read_temp1 = temperature1.get_last_received_reading();
+
     char str[20];
     int temp_int = float(read_temp1);
-    if (temp_int < 0)
+    if (temp_int < 0){
       temp_int = 0;
+    }
     sprintf(str, "%d", (temp_int - 2));
-    LcdXY(0, 0);                          // FOR OLD DISPLAY FILE
-    LcdWriteString("Temp1:");             // FOR OLD DISPLAY FILE
+    //LcdXY(0, 0);                          // FOR OLD DISPLAY FILE
+    //LcdWriteString("Temp1:");             // FOR OLD DISPLAY FILE
     char temp1Str[10];                    // Create a character array to hold the temperature value
     dtostrf(read_temp1, 4, 2, temp1Str);  // Convert the float to a C-string with one decimal place
-    LcdWriteString(temp1Str);             // FOR OLD DISPLAY FILE
+    //LcdWriteString(temp1Str);             // FOR OLD DISPLAY FILE
     //LcdWriteString(String(read_temp1));
-    LcdWriteString("C");  // FOR OLD DISPLAY FILE
+    //LcdWriteString("C");  // FOR OLD DISPLAY FILE
   #endif
-
   #if TEMPERATURE_TWO_ENABLED
     #if (TEMPERATURE_ONE_ENABLED == 0)
       char str[20];
@@ -301,24 +308,21 @@ void loop() {
 
     /* Converting Int to char* for setStr */
     temp_int = float(read_temp2);
-
-
     if (temp_int < 0)
       temp_int = 0;
 
     sprintf(str, "%d", (temp_int - 2));
-
-    LcdWriteString(", Temp2:");            // FOR OLD DISPLAY FILE
+    //LcdWriteString(", Temp2:");            // FOR OLD DISPLAY FILE
     char temp2Str[10];                    // Create a character array to hold the temperature value
     dtostrf(read_temp2, 4, 2, temp2Str);  // Convert the float to a C-string with one decimal place
-    LcdWriteString(temp2Str);             // FOR OLD DISPLAY FILE
+    //LcdWriteString(temp2Str);             // FOR OLD DISPLAY FILE
     //LcdWriteString(temp2Str);
-    LcdWriteString("C");  // FOR OLD DISPLAY FILE
+    //LcdWriteString("C");  // FOR OLD DISPLAY FILE
   #endif
 
   #if CO2_ENABLED
     String co2_data;
-    #if ((TEMPERATURE_ONE_ENABLED == 0) && (TEMPERATURE_TWO_ENABLED == 0))
+    #if ((TEMPERATURE_ONE_ENABLED == 0) || (TEMPERATURE_TWO_ENABLED == 0))
       char str[20];
     #endif
     /* CO2 Sensor Reading Logic */
@@ -393,6 +397,28 @@ void loop() {
       delay(100);
       file.print(",");
 
+      #if SI1145
+        file.print(Visible);
+      #endif
+      file.print(",");
+      delay(100);
+      #if SI1145
+        file.print(IRindex);
+      #endif
+      file.print(",");
+      delay(100);
+      #if SI1145
+        file.print(UVindex);
+      #endif
+      file.print(",");
+      delay(100);
+
+      #if MOISTURE_ENABLED
+        file.print(smspercent);
+      #endif
+      file.print(",");
+      delay(100);
+      
       #if TEMPERATURE_ONE_ENABLED
         file.print(temp1Str);
       #endif
@@ -409,28 +435,6 @@ void loop() {
       #endif
       file.print(",");
       delay(100);
-
-      #if MOISTURE_ENABLED
-        file.print(smspercent);
-      #endif
-      file.print(",");
-      delay(100);
-
-      #if SI1145
-        file.print(Visible);
-      #endif
-      file.print(",");
-      delay(100);
-      #if SI1145
-        file.print(IRindex);
-      #endif
-      file.print(",");
-      delay(100);
-      #if SI1145
-        file.print(UVindex);
-      #endif
-      file.print(",");
-      delay(100);
     
     file.println();  // optional: end the line
     file.sync();
@@ -441,62 +445,81 @@ void loop() {
     }
   }
 
-  //LCD SCREEN Print (legacy)
-  // Temp 1 && Temp 2
-  #if TEMPERATURE_ONE_ENABLED
-    LcdXY(0, 0);
-    LcdWriteString("Temp1:");
-    LcdWriteString(temp1Str);
-    LcdWriteString("C");
-  #endif
-  #if TEMPERATURE_TWO_ENABLED
-      LcdWriteString(", Temp2:");
-      LcdWriteString(temp2Str);
-      LcdWriteString("C");
-  #endif
+  #if LCDDisplay //LCD SCREEN Print (legacy)
+    // SI1145 Section
+    #if SI1145
+      char visStr[10], irStr[10], uvStr[10];
+      // Convertinbg float to string for the LCD
+      dtostrf(Visible, 4, 2, visStr);
+      dtostrf(IRindex, 4, 2, irStr);
+      dtostrf(UVindex, 4, 2, uvStr);
+      // VIS
+      LcdXY(0, 0);
+      LcdWriteString("Vis: ");
+      LcdWriteString(visStr);
+      delay(800);
+      // IR
+      LcdXY(0, 2);
+      LcdWriteString("IR: ");
+      LcdWriteString(irStr);
+      delay(800);
+      // UV
+      LcdXY(0, 4);
+      LcdWriteString("UV: ");
+      LcdWriteString(uvStr);
+    #endif
+    delay(1000);
+    LCDClear();
 
-  // CO2
-  #if CO2_ENABLED
-    LcdXY(0, 2);
-    LcdWriteString("CO2: ");
-    sprintf(str, "%d", Co2_data);
-    LcdWriteString(str);
-    LcdWriteString("ppm");
-  #endif
+    // Temp 1 && Temp 2
+    #if TEMPERATURE_ONE_ENABLED || TEMPERATURE_TWO_ENABLED
+      LcdXY(0, 0);
+      #if TEMPERATURE_ONE_ENABLED && !TEMPERATURE_TWO_ENABLED
+        LcdWriteString("Temp1:");
+        LcdWriteString(temp1Str);
+        LcdWriteString("C");
+        LcdWriteString("  Temp2:");
+        LcdWriteString("NoSensor");
+        delay(800);
+      #elif TEMPERATURE_TWO_ENABLED && !TEMPERATURE_ONE_ENABLED
+        LcdWriteString("Temp1:");
+        LcdWriteString("NoSensor");
+        LcdWriteString("  Temp2:");
+        LcdWriteString(temp2Str);
+        LcdWriteString("C");
+        delay(800);
+      #else
+        LcdWriteString("Temp1:");
+        LcdWriteString(temp1Str);
+        LcdWriteString("C");
+        delay(800);
+        LcdWriteString("  Temp2:");
+        LcdWriteString(temp2Str);
+        LcdWriteString("C");
+        delay(800);
+      #endif
+    #endif
 
-  //Soil moisture
-  #if MOISTURE_ENABLED
-    char moistureStr[10];
-    sprintf(moistureStr, "%d", smspercent);
-    LcdXY(0, 4);
-    LcdWriteString("S.M.S: ");
-    LcdWriteString(moistureStr);
-    LcdWriteString("%");
-    delay(2000);
-  #endif
+    //Soil moisture
+    #if MOISTURE_ENABLED
+      char moistureStr[10];
+      sprintf(moistureStr, "%d", smspercent);
+      LcdXY(0, 3);
+      LcdWriteString("S.M.S: ");
+      LcdWriteString(moistureStr);
+      LcdWriteString("%");
+      delay(800);
+    #endif
 
-  // SI1145 Section
-  #if SI1145
-    char visStr[10], irStr[10], uvStr[10];
-    // Convertinbg float to string for the LCD
-    dtostrf(Visible, 4, 2, visStr);
-    dtostrf(IRindex, 4, 2, irStr);
-    dtostrf(UVindex, 4, 2, uvStr);
-    // VIS
-    LcdXY(0, 0);
-    LcdWriteString("Vis: ");
-    LcdWriteString(visStr);
-    delay(800);
-    // IR
-    LcdXY(0, 2);
-    LcdWriteString("IR: ");
-    LcdWriteString(irStr);
-    delay(800);
-    // UV
-    LcdXY(0, 4);
-    LcdWriteString("UV: ");
-    LcdWriteString(uvStr);
-    delay(2000);
+    // CO2
+    #if CO2_ENABLED
+      LcdXY(0, 5);
+      LcdWriteString("CO2: ");
+      sprintf(str, "%d", Co2_data);
+      LcdWriteString(str);
+      LcdWriteString("ppm");
+    #endif
+    delay(1000);
     LCDClear();
   #endif
 
@@ -522,31 +545,29 @@ void loop() {
     #endif
 
     #if MOISTURE_ENABLED
-      Serial.print("S.M.S: ");
+      Serial.print("S.M.S:");
       Serial.print(smspercent);
       Serial.print("%");
       Serial.print(",");
     #endif
 
     #if TEMPERATURE_ONE_ENABLED
-      Serial.print("T1: ");
+      Serial.print("T1:");
       Serial.print(temp1Str);
       Serial.print("C");
       Serial.print(",");
     #endif
-
     #if TEMPERATURE_TWO_ENABLED
-      Serial.print("T2: ");
+      Serial.print("T2:");
       Serial.print(temp2Str);
-      Serial.print(" C");
+      Serial.print("C");
       Serial.print(",");
     #endif
 
     #if CO2_ENABLED
-      Serial.print("CO2: ");
+      Serial.print("CO2:");
       Serial.print(co2_data);
-      Serial.print(" PPM");
-      Serial.print(",");
+      Serial.print("PPM");
     #endif
   #endif
 }
@@ -554,24 +575,19 @@ void loop() {
 #if CO2_ENABLED || TEMPERATURE_ONE_ENABLED || TEMPERATURE_TWO_ENABLED
   void receive_reading(Ezo_board & Sensor)
   {
-
-    Serial.print(Sensor.get_name()); Serial.print(": ");  // print the name of the circuit getting the reading
-
+    //Serial.print(Sensor.get_name()); Serial.print(": ");  // print the name of the circuit getting the reading
     Sensor.receive_read_cmd();                            // get the response data
 
     switch (Sensor.get_error()) {                         // switch case based on what the response code is.
       case Ezo_board::SUCCESS:
-        Serial.print(Sensor.get_last_received_reading()); //the command was successful, print the reading
+        //Serial.print(Sensor.get_last_received_reading()); //the command was successful, print the reading
         break;
-
       case Ezo_board::FAIL:
         Serial.print("Failed ");                          //means the command has failed.
         break;
-
       case Ezo_board::NOT_READY:
         Serial.print("Pending ");                         //the command has not yet been finished calculating.
         break;
-
       case Ezo_board::NO_DATA:
         Serial.print("No Data ");                         //the sensor has no data to send.
         break;
