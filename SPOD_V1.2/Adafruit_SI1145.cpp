@@ -144,12 +144,20 @@ void Adafruit_SI1145::reset() {
  */
 uint16_t Adafruit_SI1145::readUV(void) { return read16(0x2C); }
 
+bool Adafruit_SI1145::readUV(uint16_t &value) {
+  return read16(0x2C, value);
+}
+
 /**
  * @brief Get the Visible & IR light levels
  *
  * @return uint16_t The Visible & IR light levels
  */
 uint16_t Adafruit_SI1145::readVisible(void) { return read16(0x22); }
+
+bool Adafruit_SI1145::readVisible(uint16_t &value) {
+  return read16(0x22, value);
+}
 
 // returns IR light levels
 /**
@@ -158,6 +166,10 @@ uint16_t Adafruit_SI1145::readVisible(void) { return read16(0x22); }
  * @return uint16_t The Infrared light level
  */
 uint16_t Adafruit_SI1145::readIR(void) { return read16(0x24); }
+
+bool Adafruit_SI1145::readIR(uint16_t &value) {
+  return read16(0x24, value);
+}
 
 // returns "Proximity" - assumes an IR LED is attached to LED
 /**
@@ -192,9 +204,20 @@ uint8_t Adafruit_SI1145::read8(uint8_t reg) {
 }
 
 uint16_t Adafruit_SI1145::read16(uint8_t a) {
-  uint8_t buffer[2] = {a, 0};
-  i2c_dev->write_then_read(buffer, 1, buffer, 2);
-  return ((uint16_t)buffer[0]) | ((uint16_t)buffer[1] << 8);
+  uint16_t value = 0;
+  read16(a, value);
+  return value;
+}
+
+bool Adafruit_SI1145::read16(uint8_t a, uint16_t &value) {
+  uint8_t buffer[2] = {};
+  if (!i2c_dev || !i2c_dev->write_then_read(&a, 1, buffer, 2)) {
+    value = 0;
+    return false;
+  }
+
+  value = ((uint16_t)buffer[0]) | ((uint16_t)buffer[1] << 8);
+  return true;
 }
 
 void Adafruit_SI1145::write8(uint8_t reg, uint8_t val) {
