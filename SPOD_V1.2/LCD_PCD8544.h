@@ -8,14 +8,24 @@
 // Note that I've left the RST & ChipEnable lines in this code to conform to the standard
 // 6 wire hookup guides you find on the web - ut those lines can be eliminated following the guide at:
 // https://thecavepearlproject.org/2018/05/18/adding-the-nokia-5110-lcd-to-your-arduino-data-logger/
+#ifndef RST
 #define RST 6          //6.1.12 RES: LOW followed by HIGH = reset
+#endif
+#ifndef ChipEnable
 #define ChipEnable 3   //6.1.10 SCE: chip enable active LOW //could just connect this to ground if you have dedicated wires
+#endif
 //#define ChipEnable 4  //6.1.10 SCE: chip enable active LOW //could just connect this to ground if you have dedicated wires
+#ifndef DCmodeSelect
 #define DCmodeSelect 5 //6.1.9 D/C: mode select // If D/C LOW, the current byte is interpreted as command byte  If D/C = HIGH, the following bytes are stored in the display data RAM. 
+#endif
 //#define DCmodeSelect 7 //6.1.9 D/C: mode select // If D/C LOW, the current byte is interpreted as command byte  If D/C = HIGH, the following bytes are stored in the display data RAM. ONLY FOR S4
+#ifndef DataIN
 #define DataIN 2       //6.1.7 SDIN: serial data line
+#endif
 
+#ifndef SerialCLK
 #define SerialCLK 9    //6.1.8 SCLK: serial clock line  0.0 to 4.0 Mbits/s max, -line rests low, so could be used for light control.S1 and S2
+#endif
 //#define SerialCLK 10    //Only for Pod S3 and S4
 
 #define POWERpin  17  //this version powers the 5110 screen from pin A3

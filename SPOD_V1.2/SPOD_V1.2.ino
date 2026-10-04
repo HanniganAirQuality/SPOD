@@ -17,7 +17,6 @@
 #include "co2_sensor.h"
 #include "light_sensor.h"
 #include "moisture_sensor.h"
-#include "ph_sensor.h"
 #include "temperature_sensors.h"
 
 #if CALIBRATION
@@ -41,7 +40,6 @@ struct SpodReadings {
   MoistureSensorReading moisture;
   int moistureValue;
   TemperatureSensorReadings temperatures;
-  PhSensorReading ph;
   Co2SensorReading co2;
   int co2Ppm;
 };
@@ -51,7 +49,6 @@ const size_t OUTPUT_FIELD_SIZE = 20;
 // This is the one canonical record consumed by SD, serial, and the LCD.
 // Values are calibrated (when enabled), validated, and formatted only once.
 struct SpodOutputRecord {
-  char ph[OUTPUT_FIELD_SIZE];
   char visible[OUTPUT_FIELD_SIZE];
   char infrared[OUTPUT_FIELD_SIZE];
   char uvIndex[OUTPUT_FIELD_SIZE];
@@ -166,16 +163,6 @@ SpodReadings collectReadings() {
     }
   #endif
 
-  const bool hasCompensationTemperature =
-    readings.temperatures.temperature1Valid ||
-    readings.temperatures.temperature2Valid;
-  const float compensationTemperature =
-    readings.temperatures.temperature1Valid
-      ? readings.temperatures.temperature1
-      : readings.temperatures.temperature2;
-
-  readings.ph = PhSensor::read(
-    hasCompensationTemperature, compensationTemperature);
   readings.co2 = Co2Sensor::read();
   readings.co2Ppm = readings.co2.ppm;
 
@@ -192,8 +179,6 @@ SpodReadings collectReadings() {
 SpodOutputRecord buildOutputRecord(const SpodReadings& readings) {
   SpodOutputRecord output = {};
 
-  formatFloatOutput(
-    output.ph, PH_ENABLED, readings.ph.valid, readings.ph.value);
   formatIntOutput(
     output.visible, SI1145, readings.light.visibleValid,
     readings.light.visible);
@@ -231,32 +216,33 @@ SpodOutputRecord buildOutputRecord(const SpodReadings& readings) {
   return output;
 }
 
+// RETIGO-compatible SPOD_V2.0 row. Longitude and latitude remain empty until
+// the SPOD has a position source.
 template <typename Output>
-void writeOutputRecord(
-  Output& destination, const SpodOutputRecord& output, bool includePodId) {
-  if (includePodId) {
-    destination.print(spodID);
-    destination.print(',');
-  }
+void writeOutputRecord(Output& destination, const SpodOutputRecord& output) {
   destination.print(date);
-  destination.print(',');
+  destination.print('T');
   destination.print(bufftime);
   destination.print(',');
-  destination.print(output.ph);
   destination.print(',');
-  destination.print(output.visible);
   destination.print(',');
-  destination.print(output.infrared);
+  destination.print(spodID);
   destination.print(',');
-  destination.print(output.uvIndex);
-  destination.print(',');
-  destination.print(output.moisture);
+  destination.print(firmwareVersion);
   destination.print(',');
   destination.print(output.temperature1);
   destination.print(',');
   destination.print(output.temperature2);
   destination.print(',');
-  destination.println(output.co2);
+  destination.print(output.co2);
+  destination.print(',');
+  destination.print(output.moisture);
+  destination.print(',');
+  destination.print(output.visible);
+  destination.print(',');
+  destination.print(output.infrared);
+  destination.print(',');
+  destination.println(output.uvIndex);
 }
 
 #if SD_ENABLED
@@ -274,7 +260,7 @@ void writeOutputRecord(
       return;
     }
 
-    writeOutputRecord(file, output, true);
+    writeOutputRecord(file, output);
 
     const bool syncSucceeded = file.sync();
     const bool writeSucceeded = !file.getWriteError();
@@ -292,8 +278,6 @@ void writeOutputRecord(
 #if LCDDisplay
   void updateLcd(const SpodOutputRecord& output) {
     LCDReadings displayReadings = {};
-    displayReadings.phEnabled = PH_ENABLED;
-    displayReadings.ph = output.ph;
     displayReadings.lightEnabled = SI1145;
     displayReadings.visible = output.visible;
     displayReadings.infrared = output.infrared;
@@ -314,7 +298,7 @@ void writeOutputRecord(
 
 #if SERIAL_ENABLED
   void writeSerialRecord(const SpodOutputRecord& output) {
-    writeOutputRecord(Serial, output, false);
+    writeOutputRecord(Serial, output);
   }
 #endif
 
@@ -332,7 +316,7 @@ void setup() {
   #endif
 
   const DateTime now = RTC.now();
-  fileName = "SPOD_" + String(spodID) + "_" +
+  fileName = String(spodID) + "_" +
              String(now.year()) + "_" + String(now.month()) + "_" +
              String(now.day()) + ".txt";
 
@@ -354,7 +338,6 @@ void setup() {
   const bool lightSensorReady = LightSensor::begin();
   MoistureSensor::begin();
   TemperatureSensors::begin();
-  PhSensor::begin();
   Co2Sensor::begin();
 
   #if SERIAL_DEBUG_ENABLED
