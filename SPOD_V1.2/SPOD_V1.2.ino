@@ -27,7 +27,7 @@
   #include "LCDDisplay.h"
 #endif
 
-RTC_DS1307 RTC;
+RTC_DS3231 RTC;
 SdFat sd;
 SdFile file;
 

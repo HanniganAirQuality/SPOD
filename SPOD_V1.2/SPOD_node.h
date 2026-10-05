@@ -41,7 +41,7 @@ const int PM_TX = 3;
 // This is the only POD-specific selection needed by the firmware.
 // Calibration uses the first character for the color and the final character
 // for the POD number, following the YPOD calibration pattern.
-const char spodID[] = "SPODO1";
+const char spodID[] = "SPODY2";
 const char firmwareVersion[] = "SPOD_V1.2";
 const char calID_letter = spodID[5];
 const char calID_number = spodID[6];
