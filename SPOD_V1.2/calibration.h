@@ -25,10 +25,8 @@ namespace SpodCalibration {
     (void)temperature1Valid;
 
     float calibrated = static_cast<float>(rawCo2);
-    if (strcmp(spodID, "GREEN1") == 0) {
+    if (strcmp(spodID, "SPODG1") == 0) {
       calibrated = (0.612990628f * rawCo2) + 346.073773f;
-    } else if (strcmp(spodID, "YELLOW3") == 0) {
-      calibrated = (0.789818177f * rawCo2) - 63.7789205f;
     }
 
     // ORANGE has false zero readings, YELLOW2 has no overlapping calibration

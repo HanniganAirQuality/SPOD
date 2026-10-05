@@ -14,6 +14,7 @@ SPOD V1.2 includes embedded calibration support:
 - `SPOD_V1.2/calibration.h` contains all calibration functions and POD-specific CO2 equations fitted by the sibling `SPOD-Calibration` workflow against the LI-840A, with a raw-value fallback for unsupported PODs. Channels without fitted equations are returned unchanged.
 - Orange is intentionally excluded because its July CO2 record contains false zeros; it logs raw CO2 until the sensor problem is corrected and new calibration data are collected.
 - `CALIBRATION` in `SPOD_V1.2/SPOD_node.h` controls whether calibration is applied. It is enabled for the fitted July 2026 CO2 equations.
+- SD and serial rows preserve both values in separate adjacent columns: `Uncalibrated_CO2`, `Calibrated_CO2`, `Uncalibrated_Soil`, and `Calibrated_Soil`. The LCD displays the calibrated columns.
 
 When preparing firmware for another POD, change only `spodID`.
 

@@ -205,9 +205,9 @@ namespace {
       if (reading >= firstReading && row < 6) {
         #if CALIBRATION
           writeOutputValue(
-            "Soil:", readings.moisture, "%", readings.moistureNumeric, row);
+            "Soil Moisture %:", readings.moisture, "%", readings.moistureNumeric, row);
         #else
-          writeOutputValue("Soil:", readings.moisture, "", false, row);
+          writeOutputValue("Raw SM:", readings.moisture, "", false, row);
         #endif
         row += 2;
       }

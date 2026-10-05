@@ -38,10 +38,10 @@ char bufftime[] = "hh:mm:ss";
 struct SpodReadings {
   LightSensorReading light;
   MoistureSensorReading moisture;
-  int moistureValue;
+  int calibratedMoistureValue;
   TemperatureSensorReadings temperatures;
   Co2SensorReading co2;
-  int co2Ppm;
+  int calibratedCo2Ppm;
 };
 
 const size_t OUTPUT_FIELD_SIZE = 20;
@@ -52,10 +52,12 @@ struct SpodOutputRecord {
   char visible[OUTPUT_FIELD_SIZE];
   char infrared[OUTPUT_FIELD_SIZE];
   char uvIndex[OUTPUT_FIELD_SIZE];
-  char moisture[OUTPUT_FIELD_SIZE];
+  char uncalibratedMoisture[OUTPUT_FIELD_SIZE];
+  char calibratedMoisture[OUTPUT_FIELD_SIZE];
   char temperature1[OUTPUT_FIELD_SIZE];
   char temperature2[OUTPUT_FIELD_SIZE];
-  char co2[OUTPUT_FIELD_SIZE];
+  char uncalibratedCo2[OUTPUT_FIELD_SIZE];
+  char calibratedCo2[OUTPUT_FIELD_SIZE];
   bool moistureNumeric;
   bool co2Numeric;
 };
@@ -141,12 +143,11 @@ SpodReadings collectReadings() {
     readings.temperatures.temperature1Valid;
 
   if (readings.moisture.valid) {
+    readings.calibratedMoistureValue = readings.moisture.rawValue;
     #if CALIBRATION
-      readings.moistureValue =
+      readings.calibratedMoistureValue =
         SpodCalibration::calibrateSoilMoisture(
           readings.moisture.rawValue);
-    #else
-      readings.moistureValue = readings.moisture.rawValue;
     #endif
   }
 
@@ -164,11 +165,11 @@ SpodReadings collectReadings() {
   #endif
 
   readings.co2 = Co2Sensor::read();
-  readings.co2Ppm = readings.co2.ppm;
+  readings.calibratedCo2Ppm = readings.co2.ppm;
 
   #if CALIBRATION
     if (readings.co2.valid) {
-      readings.co2Ppm = SpodCalibration::calibrateCo2(
+      readings.calibratedCo2Ppm = SpodCalibration::calibrateCo2(
         readings.co2.ppm, rawTemperature1, rawTemperature1Valid);
     }
   #endif
@@ -188,8 +189,11 @@ SpodOutputRecord buildOutputRecord(const SpodReadings& readings) {
   formatFloatOutput(
     output.uvIndex, SI1145, readings.light.uvValid, readings.light.uvIndex);
   formatIntOutput(
-    output.moisture, MOISTURE_ENABLED, readings.moisture.valid,
-    readings.moistureValue);
+    output.uncalibratedMoisture, MOISTURE_ENABLED, readings.moisture.valid,
+    readings.moisture.rawValue);
+  formatIntOutput(
+    output.calibratedMoisture, MOISTURE_ENABLED, readings.moisture.valid,
+    readings.calibratedMoistureValue);
   output.moistureNumeric = MOISTURE_ENABLED && readings.moisture.valid;
   formatFloatOutput(
     output.temperature1, TEMPERATURE_ENABLED,
@@ -201,23 +205,28 @@ SpodOutputRecord buildOutputRecord(const SpodReadings& readings) {
     readings.temperatures.temperature2);
 
   if (!CO2_ENABLED) {
-    output.co2[0] = '\0';
+    output.uncalibratedCo2[0] = '\0';
+    output.calibratedCo2[0] = '\0';
   } else if (readings.co2.valid) {
-    // Use the same calibrated/processed number for every destination.
-    formatIntOutput(output.co2, true, true, readings.co2Ppm);
+    formatIntOutput(output.uncalibratedCo2, true, true, readings.co2.ppm);
+    formatIntOutput(
+      output.calibratedCo2, true, true, readings.calibratedCo2Ppm);
     output.co2Numeric = true;
   } else if (readings.co2.hasResponse) {
     // Preserve status text such as "*WARM" rather than inventing a zero.
-    copyOutputField(output.co2, readings.co2.rawResponse);
+    copyOutputField(output.uncalibratedCo2, readings.co2.rawResponse);
+    copyOutputField(output.calibratedCo2, readings.co2.rawResponse);
   } else {
-    copyOutputField(output.co2, "NA");
+    copyOutputField(output.uncalibratedCo2, "NA");
+    copyOutputField(output.calibratedCo2, "NA");
   }
 
   return output;
 }
 
-// RETIGO-compatible SPOD_V2.0 row. Longitude and latitude remain empty until
-// the SPOD has a position source.
+// RETIGO-compatible SPOD_V1.2 row. Longitude and latitude remain empty until
+// the SPOD has a position source. Raw and calibrated CO2/soil values occupy
+// separate adjacent columns so both are preserved in SD and serial output.
 template <typename Output>
 void writeOutputRecord(Output& destination, const SpodOutputRecord& output) {
   destination.print(date);
@@ -234,9 +243,13 @@ void writeOutputRecord(Output& destination, const SpodOutputRecord& output) {
   destination.print(',');
   destination.print(output.temperature2);
   destination.print(',');
-  destination.print(output.co2);
+  destination.print(output.uncalibratedCo2);
   destination.print(',');
-  destination.print(output.moisture);
+  destination.print(output.calibratedCo2);
+  destination.print(',');
+  destination.print(output.uncalibratedMoisture);
+  destination.print(',');
+  destination.print(output.calibratedMoisture);
   destination.print(',');
   destination.print(output.visible);
   destination.print(',');
@@ -284,14 +297,14 @@ void writeOutputRecord(Output& destination, const SpodOutputRecord& output) {
     displayReadings.uvIndex = output.uvIndex;
     displayReadings.moistureEnabled = MOISTURE_ENABLED;
     displayReadings.moistureNumeric = output.moistureNumeric;
-    displayReadings.moisture = output.moisture;
+    displayReadings.moisture = output.calibratedMoisture;
     displayReadings.temperature1Enabled = TEMPERATURE_ENABLED;
     displayReadings.temperature1 = output.temperature1;
     displayReadings.temperature2Enabled = TEMPERATURE_ENABLED;
     displayReadings.temperature2 = output.temperature2;
     displayReadings.co2Enabled = CO2_ENABLED;
     displayReadings.co2Numeric = output.co2Numeric;
-    displayReadings.co2 = output.co2;
+    displayReadings.co2 = output.calibratedCo2;
     lcdDisplayUpdate(displayReadings);
   }
 #endif
