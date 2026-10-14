@@ -6,7 +6,7 @@ Thanks to Izzy for this suggestion! Here we will be tracking each version of the
 | V1.1        	| Sensor Connections    | Sascha Fowler | August 4, 2026      | SPOD code redesign from V1 - Microcontroller moved to Minima, Tested with Yellow 3 SPOD - RTC Update, Serial/File Write, Sensors All Function |		     	|
 | V1.2 (In-progress) 	| Calibration Embedding | Sascha Fowler | August 7, 2026      | Embedding calibration into the firmware - Issues with data and upload amounts	|
 | V2.0 (In-progress) 	| LCD Upgrade | Alexander Hansen | October 5, 2026      | Initial script meant to upgrade to LCD ST7735 to replace obselesced module.	|
-| V3.0 (In-progress) 	| ST7735/SD & Format | Percy Smith | October 12, 2026      | Initial script meant to upgrade to LCD ST7735 to replace obselesced module.	|
+| V3.0 (In-progress) 	| ST7735/SD & Format | Percy Smith | October 14, 2026      | Ok bro is limping to functionality; I have learned only certain y coords work!! We are in hell but for now only 3 lines display on the LCD	|
 
 # Calibration Configuration
 
