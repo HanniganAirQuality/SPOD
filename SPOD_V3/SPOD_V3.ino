@@ -1,5 +1,5 @@
 /*******************************************************************************
- * @file    SPOD_V2.ino
+ * @file    SPOD_V3.ino
  * @brief   Coordinates SPOD sensors, calibration, display, and data logging.
  *
  * @author  Sascha Fowler
@@ -52,14 +52,14 @@
   #include <Adafruit_GFX.h>
   #include <Adafruit_ST7735.h>
   #include "lcd_module.h"
-  SlowST7735 tft = SlowST7735(&SPI, LCD_CS, LCD_DC, LCD_RST);
+  LCD_Module lcd_module;
 #endif  //LCD_ENABLED
 
 /*  RTC & File Formatting */
 //RTC DS3231 Module
 RTC_DS3231 RTC;
 char bufftime[] = "YYYY-MM-DDThh:mm:ss";
-char clockonly[] = "hh:mm:ss";
+// char clockonly[] = "hh:mm:ss";
 int Y, M, D, h, m, s;
 #if SD_ENABLED
   #include <SdFat.h>
@@ -70,13 +70,13 @@ int Y, M, D, h, m, s;
 
 /***************************************************************************************/
 void setup() {
-  #if SERIAL_ENABLED
+  #if SERIAL_ENABLED || SERIAL_DEBUG_ENABLED
     Serial.begin(9600);
   #endif //SERIAL_ENABLED
 
   /* Central Firmware (comms protocols) */
   Wire.begin();
-  SPI.begin();
+  // SPI.begin();
   
   /* RTC Declarations */
   RTC.begin();  //Initialize RTC
@@ -86,8 +86,15 @@ void setup() {
 
   /* Sensor Begins */
   #if SI1145_ENABLED
-    light_sensor.begin();
-  #endif //SI1145_ENABLED
+    bool light_ready = light_sensor.begin();
+    #if SERIAL_DEBUG_ENABLED
+      if (light_ready) {
+        Serial.println(F("SI1145 ready"));
+      } else {
+        Serial.println(F("SI1145 unavailable"));
+      } //if (light_ready)
+    #endif  //SERIAL_DEBUG_ENABLED
+  #endif  //SI1145_ENABLED
   #if MOISTURE_ENABLED
     moisture_sensor.begin();
   #endif  //MOISTURE_ENABLED
@@ -100,35 +107,21 @@ void setup() {
 
   /* Pin Declarations */
   pinMode(SD_CS, OUTPUT);
-  pinMode(LCD_CS, OUTPUT);
-
-  /* Initial Pinout Call */
-  delay(100);
   digitalWrite(SD_CS, HIGH); 
+  pinMode(LCD_CS, OUTPUT);
   digitalWrite(LCD_CS, HIGH);
-  digitalWrite(SM_POWER, LOW);
-  delay(100);
+
+  // delay(100);
+  // delay(100);
 
   /* LCD Screen Initialization*/
   #if LCD_ENABLED
-    tft.initR(INITR_144GREENTAB);
-    tft.startWrite();
-    tft.setRotation(SPOD_ST7735_ROTATION);
-    tft.fillScreen(ST77XX_BLACK);
-    tft.setTextSize(2);
-    tft.setCursor(10, 42);
-    tft.print(spodID);
-    tft.endWrite();
-    delay(100);
-    #if SERIAL_DEBUG_ENABLED
-      Serial.println("LCD Attempted");
-    #endif //SERIAL_DEBUG_ENABLED
-  #endif //LCD_ENABLED
-
-  // CHECK PINS ARE RELEASED FROM SPI!!!!
-  digitalWrite(SD_CS, HIGH); 
-  digitalWrite(LCD_CS, HIGH);
+    lcd_module.begin();
+    // CHECK PINS ARE RELEASED FROM SPI!!!!
+    digitalWrite(SD_CS, HIGH); 
+    digitalWrite(LCD_CS, HIGH);
   delay(100);
+  #endif //LCD_ENABLED
 
   /* SD & File Setup */
   #if SD_ENABLED
@@ -137,7 +130,6 @@ void setup() {
       #if SERIAL_DEBUG_ENABLED
         Serial.println(F("SD Initialization Failed"));
       #endif //SERIAL_DEBUG_ENABLED
-      sd.begin(SD_CONFIG);
       delay(100);   
     } //while(!sd.begin(SD_CS))
     //File Naming (FORMATTING HAS TO BE CONSISTENT WITH GLOBAL DECLARATION!!)
@@ -162,11 +154,24 @@ void setup() {
 
 /***************************************************************************************/
 void loop() {  
+  /* INITIALIZING !!! */
+  // Default variable set (-99 = no reading, same as the YPOD)
+  float t1 = NO_READING;
+  float t2 = NO_READING;
+  int co2_raw = NO_READING;
+  int co2_cal = NO_READING;
+  int sm_raw = NO_READING;
+  int sm_cal = NO_READING;
+  int visible = NO_READING;  // long: raw light counts can reach 65535
+  int infrared = NO_READING;
+  int rawUV = NO_READING;
+
   // CHECK PINS ARE RELEASED FROM SPI!!!!
   digitalWrite(SD_CS, HIGH); 
   digitalWrite(LCD_CS, HIGH);
   delay(100);
 
+  /* Sensor Reads - a variable only changes from null if its sensor gave a good reading */
   //Timestamp for this record
   DateTime now = RTC.now();
   Y = now.year();
@@ -177,51 +182,135 @@ void loop() {
   s = now.second();
   delay(100);
   sprintf(bufftime, "%04u-%02u-%02uT%02u:%02u:%02u", Y, M, D, h, m, s);
-  // char timestamp = bufftime[11:end];
-  sprintf(clockonly, "%02u:%02u:%02u", h, m, s);
+  // sprintf(clockonly, "%02u:%02u:%02u", h, m, s);
+  const char* clockonly = bufftime + 11;
+
+  #if SI1145_ENABLED
+    LightSensorReading light = light_sensor.read();
+    if (light.visibleValid) {
+      visible = light.visible;
+    } //if (light.visibleValid)
+    if (light.infraredValid) {
+      infrared = light.infrared;
+    } //if (light.infraredValid)
+    if (light.uvValid) {
+      rawUV = light.rawUV;
+    } //if (light.uvValid)
+  #endif  //SI1145_ENABLED
+
+  #if MOISTURE_ENABLED
+    MoistureSensorReading moisture = moisture_sensor.read();
+    if (moisture.valid) {
+      sm_raw = moisture.rawValue;
+    } //if (moisture.valid)
+  #endif  //MOISTURE_ENABLED
+
+  #if TEMPERATURE_ENABLED
+    TemperatureSensorReadings temps = temperature_sensors.read();
+    if (temps.temperature1Valid) {
+      t1 = temps.temperature1;
+    } //if (temps.temperature1Valid)
+    if (temps.temperature2Valid) {
+      t2 = temps.temperature2;
+    } //if (temps.temperature2Valid)
+  #endif  //TEMPERATURE_ENABLED
+
+  #if CO2_ENABLED
+    Co2SensorReading co2 = co2_sensor.read();
+    if (co2.valid) {
+      co2_raw = co2.ppm;
+    } //if (co2.valid)
+  #endif  //CO2_ENABLED
+
+  /* Calibration - runs once, and only keeps results for sensors that worked */
+  #if CALIBRATION
+    calOutput cal_out = cal.calibrate(co2_raw, sm_raw);
+    if (co2_raw != NO_READING) {
+      co2_cal = cal_out.CO2_;
+    } //if (co2_raw != NO_READING)
+    if (sm_raw != NO_READING) {
+      sm_cal = cal_out.SM_;
+    } //if (sm_raw != NO_READING)
+  #endif  //CALIBRATION
 
   #if SERIAL_DEBUG_ENABLED
     Serial.println("Looped");
     delay(100);
   #endif //SERIAL_DEBUG_ENABLED
 
+  /* LCD */
   #if LCD_ENABLED  
-    tft.startWrite();
-    tft.fillScreen(ST77XX_BLACK);
-    tft.setCursor(10, 42);
-    tft.print(spodID);
-    tft.endWrite();
-    delay(1000);
-    Serial.println("LCD Attempted");
+  //NEED TO EVENTUALLY MOVE TO lcd_module with correct formatting...
+    lcd_module.update(clockonly, t1, t2, co2_cal, sm_cal, visible, infrared, rawUV);
+    delay(100);
     digitalWrite(LCD_CS, HIGH);
     digitalWrite(SD_CS, HIGH);
-    delay(200);
+    delay(100);
   #endif
 
+  /* SD Card */
   #if SD_ENABLED
-    delay(100);
-    Serial.print(F("LCD_CS="));  Serial.println(digitalRead(LCD_CS));
-    Serial.print(F("SD_CS="));   Serial.println(digitalRead(SD_CS));
-    sd.begin(SD_CONFIG);
-    while (!sd.begin(SD_CONFIG)) 
-    {
-      #if SERIAL_ENABLED
-        Serial.println(F("SD Initialization Failed"));
-      #endif  
+    while (!sd.begin(SD_CONFIG)) {
       #if SERIAL_DEBUG_ENABLED
+        Serial.println(F("SD Initialization Failed"));
         sd.initErrorPrint(&Serial);
-      #endif //SERIAL_DEBUG_ENABLED
-      sd.begin(SD_CONFIG);
-      delay(100);   
-    }
+      #endif  //SERIAL_DEBUG_ENABLED
+      delay(100);
+    } //while (!sd.begin(SD_CONFIG))
     file.open(fileName, O_CREAT | O_APPEND | O_WRITE);
-    file.println("Data, data, data");
-    Serial.println("SD Success");
-    file.close();
+    if (file.isOpen()) {
+      printOutput(file, t1, t2, co2_raw, co2_cal, sm_raw, sm_cal, visible, infrared, rawUV);
+      file.sync();
+      file.close();
+    } else {
+      #if SERIAL_DEBUG_ENABLED
+        Serial.println("file not opening?");
+      #endif  //SERIAL_DEBUG_ENABLED
+      file.close();
+    } //if (file.isOpen())
+    digitalWrite(SD_CS, HIGH); 
+    digitalWrite(LCD_CS, HIGH);
     delay(100);
-  #endif
+  #endif //SD_ENABLED
   
-  digitalWrite(SD_CS, HIGH); 
-  digitalWrite(LCD_CS, HIGH);
-  delay(100);
+  /* Echo to Serial */
+  #if SERIAL_ENABLED
+    printOutput(Serial, t1, t2, co2_raw, co2_cal, sm_raw, sm_cal, visible, infrared, rawUV);
+    Serial.flush();
+  #endif  //SERIAL_ENABLED
 } //void loop()
+
+/***************************************************************************************/
+// One row of data, written to SD or Serial dep. on input.
+// Column order (RETIGO-compatible): time, longitude, latitude, SPOD ID,
+// firmware version, T1, T2, CO2 raw, CO2 calibrated, SM raw, SM calibrated,
+// visible, infrared, UV index. Longitude & latitude stay empty (no GPS yet).
+void printOutput(Print &output, float t1, float t2, int co2_raw, int co2_cal,
+                 int sm_raw, int sm_cal, long visible, long infrared, int rawUV) {
+  output.print(bufftime);
+  output.print(",");
+  output.print(",");  //GPS EAST_LONGITUDE
+  output.print(",");  //GPS NORTH_LATITUDE
+  output.print(spodID);
+  output.print(",");
+  output.print(firmwareVersion);
+  output.print(",");
+  output.print(t1);
+  output.print(",");
+  output.print(t2);
+  output.print(",");
+  output.print(co2_raw);
+  output.print(",");
+  output.print(co2_cal);
+  output.print(",");
+  output.print(sm_raw);
+  output.print(",");
+  output.print(sm_cal);
+  output.print(",");
+  output.print(visible);
+  output.print(",");
+  output.print(infrared);
+  output.print(",");
+  output.print(rawUV);
+  output.print("\n");
+} //void printOutput()

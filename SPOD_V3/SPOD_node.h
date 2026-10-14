@@ -31,7 +31,7 @@
 #define SM_SENSOR             A0
 #define SM_POWER              7
 #define LCD_CS                6
-#define LCD_RST               9
+#define LCD_RST               9 //attempted to pass -1 but failed by whitescreening
 #define LCD_DC                8    
 #define SD_CS                 10           
 // We really need to add an LED indicator for the SD card - We can look at external mount LEDs
@@ -44,10 +44,10 @@
 #define CO2_I2C_ADDRESS       0x69
 
 
-#define SD_CONFIG SdSpiConfig(SD_CS, SHARED_SPI, SD_SCK_MHZ(1), &SPI)
+#define SD_CONFIG SdSpiConfig(SD_CS, SHARED_SPI, SD_SCK_MHZ(4), &SPI)
 
 // Verified settings for the 1.44-inch ST7735 through the shield dividers.
-#define SPOD_ST7735_SPI_FREQUENCY 1000000UL
+#define SPOD_ST7735_SPI_FREQUENCY 8000000UL //idk why it looksj like this but it works, just think of it as 8MHz
 #define SPOD_ST7735_ROTATION      2
 
 // This is the only POD-specific selection needed by the firmware.
@@ -58,5 +58,8 @@ const char spodID[] = "SPODY3"; //SPOD + Color-Letter + Num
   const char calID_number = spodID[5];
 
 const char firmwareVersion[] = "SPOD_V3";
+
+// Error Reading ; we will use this to print NULL 
+const int NO_READING = -99;
 
 #endif // _SPOD_NODE_H
