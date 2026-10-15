@@ -11,7 +11,7 @@
 #define _SPOD_NODE_H
 
 #define SERIAL_ENABLED          1
-  #define SERIAL_DEBUG_ENABLED  1
+  #define SERIAL_DEBUG_ENABLED  0
 #define CALIBRATION             1
 #define SCRIPT_VERSION          1
 
