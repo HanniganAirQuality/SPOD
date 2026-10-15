@@ -109,7 +109,7 @@ int Cal::calibrate_sm (int sm) {
     case 'G':
       switch (calID_number) { // Switch statement for number in spodID
         case '1':
-          sm_cal = (sm);
+          sm_cal = (-0.0024*sm + 1.48)*100 ;
           break;
         default:
           sm_cal = sm; // Default = original signal
@@ -118,7 +118,7 @@ int Cal::calibrate_sm (int sm) {
     case 'O':
       switch (calID_number) { // Switch statement for number in spodID
         case '1':
-          sm_cal = (sm);
+          sm_cal = (-0.0024*sm + 1.53)*100 ;
           break;
         default:
           sm_cal = sm; // Default = original signal
@@ -127,7 +127,7 @@ int Cal::calibrate_sm (int sm) {
     case 'P':
       switch (calID_number) { // Switch statement for number in spodID
         case '1':
-          sm_cal = (sm);
+          sm_cal = (-0.0025*sm + 1.56)*100;
           break;
         default:
           sm_cal = sm; // Default = original signal
@@ -136,10 +136,10 @@ int Cal::calibrate_sm (int sm) {
     case 'Y':
       switch (calID_number) { // Switch statement for number in spodID
         case '2':
-          sm_cal = (sm);
+          sm_cal = (-0.0023*sm + 1.39)*100 ;
           break;
         case '3':
-          sm_cal = (sm);
+          sm_cal = (-0.0017*sm + 1.07)*100 ;
           break;
         default:
           sm_cal = sm; // Default = original signal
