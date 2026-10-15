@@ -112,7 +112,7 @@ void LCD_Module::update(const char* clock, float t1, float t2, int co2_cal, int 
   // updateIntVars(38, 84, 5, co2_cal);
   // // updateIntVars(74, 107, 3, sm_cal);
   // tft.endWrite();
-  delay(2000);
+  delay(1000);
   
   // tft.startWrite();
   // tft.setRotation(SPOD_ST7735_ROTATION);

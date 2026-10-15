@@ -53,7 +53,7 @@
 // This is the only POD-specific selection needed by the firmware.
 // Calibration uses the first character for the color and the final character
 // for the POD number, following the YPOD calibration pattern.
-const char spodID[] = "SPODY3"; //SPOD + Color-Letter + Num
+const char spodID[] = "SPODP1"; //SPOD + Color-Letter + Num
   const char calID_letter = spodID[4];
   const char calID_number = spodID[5];
 
