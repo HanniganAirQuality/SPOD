@@ -63,11 +63,13 @@ void LCD_Module::update(const char* clock, float t1, float t2, int co2_cal, int 
   // tft.setTextWrap(false);
   // tft.setTextSize(2);
   // tft.setTextColor(ST77XX_WHITE, ST77XX_BLACK);
-  tft.print(uv_raw);
+  if(co2_cal==-99)   {
+    tft.print("----");
+  } else {
+    tft.print(co2_cal);
+  }
   tft.print(","); 
-  tft.print(infrared);
-  tft.print(",");
-  tft.println(visible);
+  tft.print(sm_cal);
   tft.endWrite();
   delay(100);
   tft.startWrite();
@@ -78,13 +80,13 @@ void LCD_Module::update(const char* clock, float t1, float t2, int co2_cal, int 
   // tft.setTextColor(ST77XX_WHITE, ST77XX_BLACK);
   // delay(100);
   if(t1==-99)   {
-    tft.print("--");
+    tft.print("----");
   } else {
     tft.print(t1, 1);
   }
   tft.print(",");
   if(t2==-99)   {
-    tft.println("--");
+    tft.println("----");
   } else {
     tft.println(t2, 1);
   }
