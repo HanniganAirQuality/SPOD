@@ -49,7 +49,25 @@ int Cal::calibrate_co2 (int co2) {
     case 'G':
       switch (calID_number) { // Switch statement for number in spodID
         case '1':
-          co2_cal = (0.612990628f * co2) + 346.073773f;
+          co2_cal = (0.204292677f * co2) + 243.747414f;
+          break;
+        default:
+          co2_cal = co2; // Default = original signal
+      }
+      break;
+    case 'O':
+      switch (calID_number) { // Switch statement for number in spodID
+        case '1':
+          co2_cal = (0.538121277f * co2) + 8.77086603f;
+          break;
+        default:
+          co2_cal = co2; // Default = original signal
+      }
+      break;
+    case 'P':
+      switch (calID_number) { // Switch statement for number in spodID
+        case '1':
+          co2_cal = (0.327509667f * co2) + 277.685169f;
           break;
         default:
           co2_cal = co2; // Default = original signal
@@ -57,6 +75,9 @@ int Cal::calibrate_co2 (int co2) {
       break;
     case 'Y':
       switch (calID_number) { // Switch statement for number in spodID
+        case '2':
+          co2_cal = (0.814183960f * co2) - 382.856975f;
+          break;
         case '3':
           co2_cal = (0.789818177f * co2) - 63.7789205f;
           break;
