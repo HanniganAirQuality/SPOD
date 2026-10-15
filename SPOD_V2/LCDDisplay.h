@@ -13,9 +13,6 @@
 #define SPOD_DISPLAY_MOSI_PIN  11
 #define SPOD_DISPLAY_SCK_PIN   13
 
-// Verified settings for the 1.44-inch ST7735 through the shield dividers.
-#define SPOD_ST7735_SPI_FREQUENCY 1000000UL
-#define SPOD_ST7735_ROTATION      2
 
 struct LCDReadings {
   bool lightEnabled;
