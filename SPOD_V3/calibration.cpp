@@ -106,6 +106,45 @@ int Cal::calibrate_co2 (int co2) {
 int Cal::calibrate_sm (int sm) {
   int sm_cal; // Stores calibrated soil moisture value
   switch (calID_letter) { // Switch statement for letter in spodID
+    case 'G':
+      switch (calID_number) { // Switch statement for number in spodID
+        case '1':
+          sm_cal = (sm);
+          break;
+        default:
+          sm_cal = sm; // Default = original signal
+      }
+      break;
+    case 'O':
+      switch (calID_number) { // Switch statement for number in spodID
+        case '1':
+          sm_cal = (sm);
+          break;
+        default:
+          sm_cal = sm; // Default = original signal
+      }
+      break;
+    case 'P':
+      switch (calID_number) { // Switch statement for number in spodID
+        case '1':
+          sm_cal = (sm);
+          break;
+        default:
+          sm_cal = sm; // Default = original signal
+      }
+      break;
+    case 'Y':
+      switch (calID_number) { // Switch statement for number in spodID
+        case '2':
+          sm_cal = (sm);
+          break;
+        case '3':
+          sm_cal = (sm);
+          break;
+        default:
+          sm_cal = sm; // Default = original signal
+      }
+      break;
     default:
       #if SERIAL_ENABLED
         // Serial.println("No soil moisture calibration data for this pod.");
